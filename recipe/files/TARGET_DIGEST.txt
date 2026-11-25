@@ -1,0 +1,6 @@
+image_manifest_digest=sha256:e7248cbf2b1ec96013e325061e6637c8cb315c6ee2178bf941517ef3534b5cff
+config_digest=sha256:3de6adebdecfb5161d5180e925c1ff018ad35541a91dc95e0d18739f4e9ec6a0
+tag=readystack/tempo:v3.1.1-CE-ubuntu24.04-r7
+probe_port=3200
+probe_path=/ready
+probe_timeout=180

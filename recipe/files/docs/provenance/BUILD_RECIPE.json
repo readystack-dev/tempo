@@ -1,0 +1,92 @@
+{
+  "schema": "kitforge.build_recipe.v1",
+  "slug": "tempo",
+  "image": "readystack/tempo:v3.1.1-CE-ubuntu24.04-r7",
+  "build_method": "source-rebuild-go",
+  "source": {
+    "repo": "https://github.com/grafana/tempo",
+    "ref": "v3.1.1",
+    "builder_image": "golang:1.27.4-bookworm",
+    "go_module_root": "github.com/grafana/tempo",
+    "go_version_required": "1.27.3",
+    "build_env": {
+      "CGO_ENABLED": "0",
+      "GOTOOLCHAIN": "local",
+      "GOFLAGS": "-mod=vendor"
+    },
+    "_version_note": "Retargeted 2026-10-22 to v3.1.1, the latest Tempo GA (2026-10-21). go.mod at v3.1.1 declares `go 1.27.3` (v3.0.3 said 1.26.5) with no toolchain directive, so the builder moved from the golang:1.26 line to golang:1.27.3-bookworm: under GOTOOLCHAIN=local and --network=none an older toolchain refuses the module and cannot download a newer one. Upstream's own v3.1.1 release binary reports go1.27.3. There is no go.work in the tree, so GOWORK=off is not needed (L-A50).",
+    "_vendor_note": "Tempo COMMITS its vendor/ directory (440 modules, vendor/modules.txt present), so -mod=vendor builds offline straight from the checkout. loki does not do this and needs `go mod vendor` first. Any dep_bump still requires a re-vendor, because the bumped module has to physically land in vendor/ or the build fails closed rather than silently using the old code. Sets source.vendor_committed so the vendor stage KEEPS upstream's own vendor/ (440 modules) instead of running `go mod tidy -e && go mod vendor` over it. The knob applies only while dep_bumps is empty -- bumps are stated as floors by `go mod edit -require` and need the following tidy to MVS-reconcile them, so the moment a bump is added the normal tidy+re-vendor path returns automatically.",
+    "_submodule_note": "./tools is a SEPARATE go module (github.com/grafana/tempo/tools) holding chloggen and friends. It is developer tooling, is not imported by any cmd/, and must not be built or shipped -- this is NOT the etcd multi-module case, the product binaries all live in the root module.",
+    "source_date_epoch": 1795164606,
+    "source_date_epoch_provenance": "the time release v3.1.1-CE-ubuntu24.04-r7 was cut (2026-11-20T08:50:06Z), by scripts/retarget.py --rev-bump: ReadyStack dates an image by when its release was packaged (owner 2026-11-10), recorded here once and used by every rebuild of the release; it builds upstream commit 9db7df79d2af, dated 2026-10-21T15:24:36Z (source.commit_epoch).",
+    "vendor_committed": true,
+    "commit": "9db7df79d2af105a90d96484e6403e1fda0d011e",
+    "source_date_epoch_basis": "release-cut",
+    "commit_epoch": 1792596276
+  },
+  "binaries_from_source": [
+    {
+      "name": "tempo",
+      "main_pkg": "./cmd/tempo",
+      "cgo_enabled": 0,
+      "build_tags": [
+        "netgo"
+      ],
+      "build_flags": [
+        "-trimpath",
+        "-mod=vendor"
+      ],
+      "ldflags": "-s -w -X main.Version=@VERSION_BARE@ -X main.Branch=HEAD -X main.Revision=@COMMIT:8@",
+      "out_path": "/usr/bin/tempo",
+      "verify_subcmd": "-version",
+      "_note": "cmd/tempo/main.go declares package-level Version/Branch/Revision and its init() copies them into prometheus/common/version, which is what `tempo -version` prints -- so the -X targets are `main.*`, NOT a util/build package as in loki. Stamp the BARE version (@VERSION_BARE@) with no leading v (L: buildinfo.tag no-leading-v, from coder). Revision is the short sha of the tag's commit (@COMMIT:8@)."
+    },
+    {
+      "name": "tempo-cli",
+      "main_pkg": "./cmd/tempo-cli",
+      "cgo_enabled": 0,
+      "build_tags": [
+        "netgo"
+      ],
+      "build_flags": [
+        "-trimpath",
+        "-mod=vendor"
+      ],
+      "ldflags": "-s -w",
+      "out_path": "/usr/bin/tempo-cli",
+      "verify_subcmd": "--help",
+      "_note": "The operator tool for inspecting blocks, the WAL and the local backend offline. Same module and therefore the same dependency set as tempo itself, so it adds no CVE surface -- every package it links is already in the image via the main binary. cmd/tempo-query (a Jaeger gRPC plugin, useless without Jaeger) and cmd/tempo-vulture (a load-test harness) are deliberately NOT built."
+    }
+  ],
+  "runtime_packages": [
+    "base-files",
+    "base-passwd",
+    "ca-certificates",
+    "coreutils",
+    "dash",
+    "gzip",
+    "libacl1",
+    "libc6",
+    "libpcre2-8-0",
+    "libselinux1",
+    "libssl3t64",
+    "openssl",
+    "tar",
+    "tzdata"
+  ],
+  "runtime_base": {
+    "kind": "chisel",
+    "shell": true,
+    "tools": [
+      "tar",
+      "chown"
+    ],
+    "slices": [
+      "gzip_bins"
+    ],
+    "provides": [
+      "gzip"
+    ],
+    "packages": "vendored/chisel/packages.tsv"
+  }
+}

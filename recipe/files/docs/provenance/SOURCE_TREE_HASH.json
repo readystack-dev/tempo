@@ -1,0 +1,9 @@
+{
+  "schema": "kitforge.source_tree_hash.v1",
+  "slug": "tempo",
+  "repo": "https://github.com/grafana/tempo",
+  "ref": "v3.1.1",
+  "commit": "9db7df79d2af105a90d96484e6403e1fda0d011e",
+  "tree_listing_sha256": "b564f0e22361849b102298712e20b1b23f7c5efe890d4c83d6b4c7f97b0ca113",
+  "file_count": 15740
+}

@@ -1,0 +1,63 @@
+# ReadyStack Grafana Tempo single-binary (-target=all) filesystem config.
+# Derived from upstream example/docker-compose/single-binary/tempo.yaml (v3.1.1), with the
+# changes that example needs before it can run as a self-contained image:
+#
+#  1. The OTLP receivers bind 0.0.0.0 instead of "tempo:4317". Upstream's literal hostname
+#     only resolves inside their compose network; in a plain `docker run` the listener
+#     fails to bind and trace ingest is silently dead while /ready still says 200.
+#  2. metrics_generator (remote_write to http://prometheus:9090 and the span-metrics /
+#     service-graphs processors) is left out. There is no Prometheus in this image, so it
+#     would retry a dead endpoint forever. Without metrics_generator.storage.path Tempo
+#     logs "metrics-generator is not configured" once and runs without it; add the block
+#     back when pointing this at a real Prometheus.
+#  3. usage_report.reporting_enabled is false. No phone-home, and nothing to time out on
+#     in an air-gapped install.
+#  4. Tempo 3 has no ingester or compactor: in single-binary mode spans go from the
+#     distributor straight to the live-store (no Kafka), and compaction and retention run
+#     in the backend-scheduler / backend-worker. Retention is therefore
+#     backend_worker.compaction.block_retention. The config is parsed strictly, so a
+#     Tempo 2 `ingester:` or `compactor:` block stops the process at start.
+#  5. The live-store paths are stated (they are upstream's defaults) so every path Tempo
+#     writes is visible here and under the one volume, /var/tempo.
+#
+# Traces land on local disk under /var/tempo -- no object store, no external DB, no sidecar.
+# Replace for production (S3/GCS backend, TLS, multitenancy).
+stream_over_http_enabled: true
+
+server:
+  http_listen_port: 3200
+  log_level: info
+
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: "0.0.0.0:4317"
+        http:
+          endpoint: "0.0.0.0:4318"
+
+live_store:
+  wal:
+    path: /var/tempo/live-store/traces
+  shutdown_marker_dir: /var/tempo/live-store/shutdown-marker
+
+backend_worker:
+  compaction:
+    block_retention: 48h
+
+query_frontend:
+  search:
+    duration_slo: 5s
+    throughput_bytes_slo: 1.073741824e+09
+
+storage:
+  trace:
+    backend: local
+    wal:
+      path: /var/tempo/wal
+    local:
+      path: /var/tempo/blocks
+
+usage_report:
+  reporting_enabled: false
